@@ -64,6 +64,27 @@ const osThreadAttr_t Task3_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for TaskPedRed */
+osThreadId_t TaskPedRedHandle;
+const osThreadAttr_t TaskPedRed_attributes = {
+  .name = "TaskPedRed",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for TaskPedGreed */
+osThreadId_t TaskPedGreedHandle;
+const osThreadAttr_t TaskPedGreed_attributes = {
+  .name = "TaskPedGreed",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for TaskBtn */
+osThreadId_t TaskBtnHandle;
+const osThreadAttr_t TaskBtn_attributes = {
+  .name = "TaskBtn",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -75,6 +96,9 @@ static void MX_USART2_UART_Init(void);
 void StartTask1(void *argument);
 void StartTask2(void *argument);
 void StartTask3(void *argument);
+void StartTaskPedRed(void *argument);
+void StartTaskPedGreen(void *argument);
+void StartTaskBtn(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -149,6 +173,15 @@ int main(void)
 
   /* creation of Task3 */
   Task3Handle = osThreadNew(StartTask3, NULL, &Task3_attributes);
+
+  /* creation of TaskPedRed */
+  TaskPedRedHandle = osThreadNew(StartTaskPedRed, NULL, &TaskPedRed_attributes);
+
+  /* creation of TaskPedGreed */
+  TaskPedGreedHandle = osThreadNew(StartTaskPedGreen, NULL, &TaskPedGreed_attributes);
+
+  /* creation of TaskBtn */
+  TaskBtnHandle = osThreadNew(StartTaskBtn, NULL, &TaskBtn_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -276,15 +309,25 @@ static void MX_GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PB3 PB4 PB5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5;
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB10 PB3 PB4 PB5
+                           PB6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -295,10 +338,12 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-int phase1 = 10000;
-int phase2 = 2000;
-int phase3 = 10000;
-int phase4 = 3000;
+int phase2 = 3000;
+int phase3 = 1000;
+int phase4 = 10000;
+int phase5 = 1000;
+int phase6 = 2000;
+int buttonPressed = 0;
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartTask1 */
@@ -312,17 +357,22 @@ void StartTask1(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-  for(;;)
-  {
-	  HAL_UART_Transmit(&huart2, dataTask1, sizeof(dataTask1), 1000);
-	 // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_RESET);
-	  HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_5);
-    osDelay(phase1);
-    osDelay(phase2);
-	  HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_5);
-	  osDelay(phase3);
-	  osDelay(phase4);
-  }
+	for (;;)
+	  {
+	    // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_RESET);
+	    //off
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5,GPIO_PIN_RESET);//off
+	    if (buttonPressed)
+	    {
+			osDelay(phase2);
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);//on
+			osDelay(phase3);
+			osDelay(phase4);
+			osDelay(phase5);
+			osDelay(phase6);
+			buttonPressed = 0;
+		}
+	  }
   /* USER CODE END 5 */
 }
 
@@ -337,18 +387,21 @@ void StartTask2(void *argument)
 {
   /* USER CODE BEGIN StartTask2 */
   /* Infinite loop */
-  for(;;)
-  {
-	  HAL_UART_Transmit(&huart2, dataTask2, sizeof(dataTask2), 1000);
-	  osDelay(phase1);
-	  HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_4);
-	  osDelay(phase2);
-	  HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_4);
-	  osDelay(phase3);
-	  HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_4);
-	  osDelay(phase4);
-	  HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_4);
-  }
+	for (;;)
+	  {
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4,GPIO_PIN_RESET);//off
+	    if (buttonPressed){
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);//on
+			osDelay(phase2);
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);//off
+			osDelay(phase3);
+			osDelay(phase4);
+			osDelay(phase5);
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);//on
+			osDelay(phase6);
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);//off
+	    }
+	  }
   /* USER CODE END StartTask2 */
 }
 
@@ -363,17 +416,97 @@ void StartTask3(void *argument)
 {
   /* USER CODE BEGIN StartTask3 */
   /* Infinite loop */
-  for(;;)
-  {
-	  HAL_UART_Transmit(&huart2, dataTask3, sizeof(dataTask3), 1000);
-	  osDelay(phase1);
-	  osDelay(phase2);
-	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
-	  osDelay(phase3);
-	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
-	  osDelay(phase2);
-  }
+	for (;;)
+	  {
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3,GPIO_PIN_SET);//on
+	    if (buttonPressed){
+	    	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);//off
+	        osDelay(phase2);
+	        osDelay(phase3);
+	        osDelay(phase4);
+	        osDelay(phase5);
+	        osDelay(phase6);
+	    }
+	  }
   /* USER CODE END StartTask3 */
+}
+
+/* USER CODE BEGIN Header_StartTaskPedRed */
+/**
+* @brief Function implementing the TaskPedRed thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTaskPedRed */
+void StartTaskPedRed(void *argument)
+{
+  /* USER CODE BEGIN StartTaskPedRed */
+  /* Infinite loop */
+	for (;;)
+		  {
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6,GPIO_PIN_SET);//on
+		    if (buttonPressed){
+		    	osDelay(phase2);
+				osDelay(phase3);
+				HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_6);//off
+				osDelay(phase4);
+				HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_6);//on
+				osDelay(phase5);
+				osDelay(phase6);
+		    }
+		  }
+  /* USER CODE END StartTaskPedRed */
+}
+
+/* USER CODE BEGIN Header_StartTaskPedGreen */
+/**
+* @brief Function implementing the TaskPedGreed thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTaskPedGreen */
+void StartTaskPedGreen(void *argument)
+{
+  /* USER CODE BEGIN StartTaskPedGreen */
+  /* Infinite loop */
+	for (;;)
+	  {
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10,GPIO_PIN_RESET);//off
+	    if (buttonPressed){
+	    	osDelay(phase2);
+	    	osDelay(phase3);
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);//on
+			osDelay(phase4);
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);//off
+			osDelay(phase5);
+			osDelay(phase6);
+	    }
+	  }
+  /* USER CODE END StartTaskPedGreen */
+}
+
+/* USER CODE BEGIN Header_StartTaskBtn */
+/**
+* @brief Function implementing the TaskBtn thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTaskBtn */
+void StartTaskBtn(void *argument)
+{
+  /* USER CODE BEGIN StartTaskBtn */
+  /* Infinite loop */
+  for (;;)
+	  {
+	  uint8_t str1[] = "I am waiting push-button\r\n";
+	  HAL_UART_Transmit(&huart2, str1, sizeof(str1), 1000);
+	  while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13));
+	  buttonPressed = 1;
+	  uint8_t str2[] = "I got push-button\r\n";
+	  HAL_UART_Transmit(&huart2, str2, sizeof(str2), 1000);
+	  osDelay(500);
+	  }
+  /* USER CODE END StartTaskBtn */
 }
 
 /**
